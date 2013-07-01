@@ -36,8 +36,10 @@ directory micro_bosh_deploy_dir
 
 def swift(*args, &block)
   auth_url = Turtles.config['cloud'][:openstack_auth_url]
-  admin_key = Turtles.config['cloud_ext'][:openstack_admin_key]
-  sh "swift -A #{auth_url} -V 2.0 -U admin:admin -K #{admin_key} #{args.join(' ')}", &block
+  openstack_username = Turtles.config['cloud'][:openstack_username]
+  user_key = Turtles.config['cloud'][:openstack_api_key]
+  tenant = Turtles.config['cloud'][:openstack_tenant]
+  sh "swift -A #{auth_url} -V 2.0 -U #{openstack_username}:#{tenant} -K #{user_key} #{args.join(' ')}", &block
 end
 
 def bosh_uuid
@@ -55,15 +57,12 @@ end
 
 # TASKS
 
-file bosh_release => WORK_DIR do |t|
+file bosh_checkout => WORK_DIR do |t|
   next if exist t
   cd WORK_DIR
-  rm_rf 'bosh-release'
-  sh 'git clone git://github.com/cloudfoundry/bosh-release.git'
-  cd 'bosh-release' do
-    sh "#{turtles_path('scripts', 'fix_gitmodules.sh')} #{pwd}/.gitmodules"
-    sh 'git submodule update --init'
-    sh 'git stash'
+  rm_rf 'bosh'
+  sh 'git clone git://github.com/cloudfoundry/bosh.git'
+  cd 'bosh/release' do
     cp data_file('bosh-release-config.yml'), 'config/dev.yml' 
     sh 'bosh create release --with-tarball'
     tarball = pwd + '/' + Dir['dev_releases/*.tgz'].first
@@ -71,15 +70,7 @@ file bosh_release => WORK_DIR do |t|
   end
 end
 
-file bosh_checkout => WORK_DIR do |t|
-  next if exist t
-  cd WORK_DIR
-  rm_rf 'bosh'
-  sh 'git clone git://github.com/cloudfoundry/bosh.git'
-end
-
-
-file micro_bosh_stemcell => [bosh_checkout, bosh_release, WORK_DIR] do |t|
+file micro_bosh_stemcell => [bosh_checkout, WORK_DIR] do |t|
   next if exist t
   cd WORK_DIR
   cd 'bosh/agent' do
