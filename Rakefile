@@ -39,7 +39,7 @@ def swift(*args, &block)
   openstack_username = Turtles.config['cloud'][:openstack_username]
   user_key = Turtles.config['cloud'][:openstack_api_key]
   tenant = Turtles.config['cloud'][:openstack_tenant]
-  sh "swift -A #{auth_url} -V 2.0 -U #{openstack_username}:#{tenant} -K #{user_key} #{args.join(' ')}", &block
+  sh "swift -A #{auth_url} -V 2.0 -U #{tenant}:#{openstack_username} -K #{user_key} #{args.join(' ')}", &block
 end
 
 def bosh_uuid
